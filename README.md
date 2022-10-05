@@ -42,4 +42,8 @@ void main() {
    - #### Configuration
      - Data1 300030
      - Prog RS232 1130
-     
+
+ - ### URANO POP LIGHT
+   - #### Configuration
+       - BaundRate 9600
+       - stopbits 2

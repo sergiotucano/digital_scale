@@ -58,7 +58,7 @@ class DigitalScale implements DigitalScaleImplementation {
       case 'toledo prix 3':
         initString = String.fromCharCode(5) + String.fromCharCode(13);
         factor = 1000;
-        timeout = 2500;
+        timeout = 2600;
         baundRate = 115200;
         stopBits = 1;
         bits = 8;
@@ -69,7 +69,7 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(10) +
             String.fromCharCode(13);
         factor = 1;
-        timeout = 2000;
+        timeout = 3200;
         baundRate = 9600;
         stopBits = 2;
         bits = 8;
