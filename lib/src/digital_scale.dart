@@ -39,7 +39,6 @@ class DigitalScale implements DigitalScaleImplementation {
 
     if (!serialPort.isOpen) {
       if (!serialPort.openReadWrite()) {
-        //print(SerialPort.lastError);
         return false;
       }
     }
@@ -62,6 +61,17 @@ class DigitalScale implements DigitalScaleImplementation {
         timeout = 2500;
         baundRate = 115200;
         stopBits = 1;
+        bits = 8;
+        parity = 0;
+        break;
+      case 'urano pop light':
+        initString = String.fromCharCode(5) +
+            String.fromCharCode(10) +
+            String.fromCharCode(13);
+        factor = 1;
+        timeout = 2000;
+        baundRate = 9600;
+        stopBits = 2;
         bits = 8;
         parity = 0;
         break;
@@ -109,8 +119,18 @@ class DigitalScale implements DigitalScaleImplementation {
       double weight = 0.00;
       serialPortReader.stream.listen((data) async {
         final String decodedWeight = utf8.decode(data);
-        final String weightStr =
-            decodedWeight.substring(1, (decodedWeight.length - 1)).trim();
+        String weightStr = '0.00';
+
+        if (digitalScaleModel.toLowerCase() == 'urano pop light') {
+          weightStr = decodedWeight
+              .substring(decodedWeight.indexOf('N0') + 2,
+                  (decodedWeight.indexOf('kg') - 1))
+              .trim()
+              .replaceAll(',', '.');
+        } else {
+          weightStr =
+              decodedWeight.substring(1, (decodedWeight.length - 1)).trim();
+        }
 
         completer.complete(mapData['weight']?.value);
 
