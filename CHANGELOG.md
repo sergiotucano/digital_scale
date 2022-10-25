@@ -1,3 +1,6 @@
+## 0.0.4+0
+* Fix weight reader
+
 ## 0.0.3+2
 * Fix timeout 
 

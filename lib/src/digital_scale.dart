@@ -22,9 +22,11 @@ class DigitalScale implements DigitalScaleImplementation {
     bool resp = open();
 
     if (resp) {
-      config();
-      writeInPort(initString);
-      readPort();
+      try {
+        config();
+        writeInPort(initString);
+        readPort();
+      } catch (_) {}
     }
   }
 
@@ -69,7 +71,7 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(10) +
             String.fromCharCode(13);
         factor = 1;
-        timeout = 3200;
+        timeout = 4000;
         baundRate = 9600;
         stopBits = 2;
         bits = 8;
@@ -99,13 +101,17 @@ class DigitalScale implements DigitalScaleImplementation {
   /// write enq in port
   @override
   writeInPort(String value) {
-    serialPort.write(utf8.encoder.convert(value));
+    try {
+      serialPort.write(utf8.encoder.convert(value));
+    } catch (_) {}
   }
 
   /// read the port
   @override
   readPort() {
-    serialPortReader = SerialPortReader(serialPort);
+    try {
+      serialPortReader = SerialPortReader(serialPort);
+    } catch (_) {}
   }
 
   /// create the listener and return the weight
@@ -114,31 +120,37 @@ class DigitalScale implements DigitalScaleImplementation {
     RoundAbnt roundAbnt = RoundAbnt();
     var completer = Completer<double>();
     Map<String, ValueNotifier<double>> mapData = {};
+    String decodedWeight = '';
+    bool enterListen = false;
 
     try {
       double weight = 0.00;
       serialPortReader.stream.listen((data) async {
-        final String decodedWeight = utf8.decode(data);
-        String weightStr = '0.00';
+        decodedWeight += utf8.decode(data);
 
         if (digitalScaleModel.toLowerCase() == 'urano pop light') {
-          weightStr = decodedWeight
-              .substring(decodedWeight.indexOf('N0') + 2,
-                  (decodedWeight.indexOf('kg') - 1))
+          int n0 = utf8.decode(data).indexOf('N0') + 2;
+          int kg = utf8.decode(data).indexOf('kg');
+          decodedWeight = utf8
+              .decode(data)
+              .substring(n0, kg)
               .trim()
-              .replaceAll(',', '.');
+              .replaceAll(',', '.')
+              .trim();
+          enterListen = true;
         } else {
-          weightStr =
-              decodedWeight.substring(1, (decodedWeight.length - 1)).trim();
+          decodedWeight = utf8
+              .decode(data)
+              .substring(1, (utf8.decode(data).length - 1))
+              .trim();
         }
 
-        completer.complete(mapData['weight']?.value);
-
-        weight = ((double.parse(weightStr)) / factor);
+        weight = ((double.parse(decodedWeight)) / factor);
         weight = roundAbnt.roundAbnt('$weight', 3);
 
         mapData['weight'] = ValueNotifier<double>(weight);
 
+        completer.complete(mapData['weight']?.value);
         completer.future;
       });
 
@@ -147,8 +159,34 @@ class DigitalScale implements DigitalScaleImplementation {
         return weight;
       });
 
+      if (!enterListen) {
+        if (digitalScaleModel.toLowerCase() == 'urano pop light') {
+          int n0 = decodedWeight.indexOf('N0') + 2;
+          int kg = decodedWeight.indexOf('kg');
+          decodedWeight = decodedWeight
+              .substring(n0, kg)
+              .trim()
+              .replaceAll(',', '.')
+              .trim();
+          enterListen = true;
+        } else {
+          decodedWeight =
+              decodedWeight.substring(1, (decodedWeight.length - 1)).trim();
+        }
+
+        weight = ((double.parse(decodedWeight)) / factor);
+        weight = roundAbnt.roundAbnt('$weight', 3);
+
+        mapData['weight'] = ValueNotifier<double>(weight);
+        completer.complete(mapData['weight']?.value);
+        completer.future;
+      }
+
       return weight;
-    } catch (_) {
+    } catch (e) {
+      if (kDebugMode) {
+        print('digital scale error: $e');
+      }
       return -99.99;
     }
   }
