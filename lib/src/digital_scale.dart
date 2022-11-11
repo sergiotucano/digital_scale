@@ -9,6 +9,7 @@ import 'package:roundabnt/round_abnt.dart';
 class DigitalScale implements DigitalScaleImplementation {
   final String digitalScalePort;
   final String digitalScaleModel;
+  final int digitalScaleRate;
   static late SerialPort serialPort;
   static late SerialPortReader serialPortReader;
   static int factor = 1;
@@ -16,7 +17,10 @@ class DigitalScale implements DigitalScaleImplementation {
   static String initString = '';
 
   /// initialize the serial port and call methods
-  DigitalScale(this.digitalScalePort, this.digitalScaleModel) {
+  DigitalScale(
+      {required this.digitalScalePort,
+      required this.digitalScaleModel,
+      required this.digitalScaleRate}) {
     serialPort = SerialPort(digitalScalePort);
 
     bool resp = open();
@@ -51,7 +55,6 @@ class DigitalScale implements DigitalScaleImplementation {
   /// Configure the port with arguments
   @override
   config() {
-    int baundRate;
     int stopBits;
     int bits;
     int parity;
@@ -61,7 +64,6 @@ class DigitalScale implements DigitalScaleImplementation {
         initString = String.fromCharCode(5) + String.fromCharCode(13);
         factor = 1000;
         timeout = 2600;
-        baundRate = 115200;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -72,7 +74,6 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(13);
         factor = 1;
         timeout = 4000;
-        baundRate = 9600;
         stopBits = 2;
         bits = 8;
         parity = 0;
@@ -84,14 +85,13 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(13);
         factor = 1;
         timeout = 6000;
-        baundRate = 2400;
         stopBits = 1;
         bits = 8;
         parity = 0;
     }
 
     SerialPortConfig config = serialPort.config;
-    config.baudRate = baundRate;
+    config.baudRate = digitalScaleRate;
     config.stopBits = stopBits;
     config.bits = bits;
     config.parity = parity;

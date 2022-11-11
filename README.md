@@ -1,10 +1,11 @@
+[![Project Owner](https://img.shields.io/badge/owner-sergiotucano-dd8800)](https://github.com/sergiotucano/)
+[![GitHub stars](https://img.shields.io/github/stars/sergiotucano/digital_scale?style=social)](https://github.com/sergiotucano/roundabnt)
+[![GitHub forks](https://img.shields.io/github/forks/sergiotucano/digital_scale?style=social)](https://github.com/sergiotucano/roundabnt/fork)
+
 # Digital Scale
 
-This package read a weight from digital scale by serial port 
+This package read a weight from digital scale by serial or usb port
 
-[![Project Owner](https://img.shields.io/badge/owner-sergiotucano-dd8800)](https://github.com/sergiotucano/)
-[GitHub stars](https://img.shields.io/github/stars/sergiotucano/digital_scale?style=social)
-[![GitHub forks](https://img.shields.io/github/forks/sergiotucano/digital_scale?style=social)](https://github.com/sergiotucano/roundabnt/fork)
 
 ## Installation
 
@@ -24,7 +25,11 @@ import 'package:digital_scale/digital_scale.dart';
 void main() {
 
   /// call Digital Scale and pass arguments
-  final digitalScale = DigitalScale('COM1', 'toledo prix 3');
+  final digitalScale = DigitalScale(
+      digitalScalePort: 'COM1',
+      digitalScaleModel: 'toledo prix 3',
+      digitalScaleRate: 9600
+  );
 
   /// async return of weight
   digitalScale.getWeight().then((resp) => print('weight $resp'));
@@ -35,7 +40,6 @@ void main() {
 
  - ### Toledo Prix 3
    - #### Configuration
-     - BaundRate 115200 
      - Protocol Ptr1
    
  - ### Elgin DP-1502
@@ -44,6 +48,5 @@ void main() {
      - Prog RS232 1130
 
  - ### URANO POP LIGHT
-   - #### Configuration
-       - BaundRate 9600
+   - #### Configuration    
        - stopbits 2

@@ -5,7 +5,11 @@ import 'package:digital_scale/digital_scale.dart';
 void main() {
 
   /// call Digital Scale and pass arguments
-  final digitalScale = DigitalScale('COM1', 'toledo prix 3');
+  final digitalScale = DigitalScale(
+      digitalScalePort: 'COM1',
+      digitalScaleModel: 'toledo prix 3',
+      digitalScaleRate: 9600
+  );
 
   /// async return of weight
   digitalScale.getWeight().then((resp) => print('weight $resp'));
