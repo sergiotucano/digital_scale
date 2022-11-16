@@ -63,7 +63,7 @@ class DigitalScale implements DigitalScaleImplementation {
       case 'toledo prix 3':
         initString = String.fromCharCode(5) + String.fromCharCode(13);
         factor = 1000;
-        timeout = 2600;
+        timeout = 3000;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -137,13 +137,13 @@ class DigitalScale implements DigitalScaleImplementation {
               .trim()
               .replaceAll(',', '.')
               .trim();
-          enterListen = true;
         } else {
           decodedWeight = utf8
               .decode(data)
               .substring(1, (utf8.decode(data).length - 1))
               .trim();
         }
+        enterListen = true;
 
         weight = ((double.parse(decodedWeight)) / factor);
         weight = roundAbnt.roundAbnt('$weight', 3);

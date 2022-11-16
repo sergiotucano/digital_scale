@@ -1,3 +1,6 @@
+## 0.0.5+1
+* Correct read weight in Toledo Prix
+
 ## 0.0.5+0
 * Create baud rate parameter
 
