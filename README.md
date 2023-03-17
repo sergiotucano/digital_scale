@@ -28,7 +28,8 @@ void main() {
   final digitalScale = DigitalScale(
       digitalScalePort: 'COM1',
       digitalScaleModel: 'toledo prix 3',
-      digitalScaleRate: 9600
+      digitalScaleRate: 9600,
+      digitalScaleTimeout: 3000,
   );
 
   /// async return of weight
@@ -41,12 +42,15 @@ void main() {
  - ### Toledo Prix 3
    - #### Configuration
      - Protocol Ptr1
-   
+     - recommended timeout 3000 ms
+     
  - ### Elgin DP-1502
    - #### Configuration
      - Data1 300030
      - Prog RS232 1130
-
+     - recommended timeout 6000 ms
+     
  - ### URANO POP LIGHT
    - #### Configuration    
        - stopbits 2
+       - recommended timeout 4000 ms

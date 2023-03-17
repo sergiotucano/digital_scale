@@ -10,17 +10,18 @@ class DigitalScale implements DigitalScaleImplementation {
   final String digitalScalePort;
   final String digitalScaleModel;
   final int digitalScaleRate;
+  final int digitalScaleTimeout;
   static late SerialPort serialPort;
   static late SerialPortReader serialPortReader;
   static int factor = 1;
-  static int timeout = 5000;
   static String initString = '';
 
   /// initialize the serial port and call methods
   DigitalScale(
       {required this.digitalScalePort,
       required this.digitalScaleModel,
-      required this.digitalScaleRate}) {
+      required this.digitalScaleRate,
+      required this.digitalScaleTimeout,}) {
     serialPort = SerialPort(digitalScalePort);
 
     bool resp = open();
@@ -63,7 +64,6 @@ class DigitalScale implements DigitalScaleImplementation {
       case 'toledo prix 3':
         initString = String.fromCharCode(5) + String.fromCharCode(13);
         factor = 1000;
-        timeout = 3000;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -73,7 +73,6 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(10) +
             String.fromCharCode(13);
         factor = 1;
-        timeout = 4000;
         stopBits = 2;
         bits = 8;
         parity = 0;
@@ -84,7 +83,6 @@ class DigitalScale implements DigitalScaleImplementation {
             String.fromCharCode(10) +
             String.fromCharCode(13);
         factor = 1;
-        timeout = 6000;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -154,7 +152,7 @@ class DigitalScale implements DigitalScaleImplementation {
         completer.future;
       });
 
-      await Future.delayed(Duration(milliseconds: timeout), () {
+      await Future.delayed(Duration(milliseconds: digitalScaleTimeout), () {
         serialPort.close();
         return weight;
       });

@@ -1,3 +1,6 @@
+## 0.0.6+0
+* Create timeout parameter
+
 ## 0.0.5+1
 * Correct read weight in Toledo Prix
 

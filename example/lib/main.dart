@@ -8,7 +8,8 @@ void main() {
   final digitalScale = DigitalScale(
       digitalScalePort: 'COM1',
       digitalScaleModel: 'toledo prix 3',
-      digitalScaleRate: 9600
+      digitalScaleRate: 9600,
+      digitalScaleTimeout: 3000,
   );
 
   /// async return of weight
