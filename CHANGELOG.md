@@ -1,3 +1,6 @@
+## 0.0.6+1
+* Fix Timeout and weight reader 
+ 
 ## 0.0.6+0
 * Create timeout parameter
 

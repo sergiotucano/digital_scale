@@ -116,75 +116,49 @@ class DigitalScale implements DigitalScaleImplementation {
   @override
   Future<double> getWeight() async {
     RoundAbnt roundAbnt = RoundAbnt();
-    var completer = Completer<double>();
     Map<String, ValueNotifier<double>> mapData = {};
+    var completer = Completer<double>();
     String decodedWeight = '';
-    bool enterListen = false;
+    StreamSubscription? subscription;
 
     try {
       double weight = 0.00;
-      serialPortReader.stream.listen((data) async {
+      subscription = serialPortReader.stream.listen((data) async {
         decodedWeight += utf8.decode(data);
 
         if (digitalScaleModel.toLowerCase() == 'urano pop light') {
-          int n0 = utf8.decode(data).indexOf('N0') + 2;
-          int kg = utf8.decode(data).indexOf('kg');
-          decodedWeight = utf8
-              .decode(data)
-              .substring(n0, kg)
-              .trim()
-              .replaceAll(',', '.')
-              .trim();
-        } else {
-          decodedWeight = utf8
-              .decode(data)
-              .substring(1, (utf8.decode(data).length - 1))
-              .trim();
-        }
-        enterListen = true;
-
-        weight = ((double.parse(decodedWeight)) / factor);
-        weight = roundAbnt.roundAbnt('$weight', 3);
-
-        mapData['weight'] = ValueNotifier<double>(weight);
-
-        completer.complete(mapData['weight']?.value);
-        completer.future;
-      });
-
-      await Future.delayed(Duration(milliseconds: digitalScaleTimeout), () {
-        serialPort.close();
-        return weight;
-      });
-
-      if (!enterListen) {
-        if (digitalScaleModel.toLowerCase() == 'urano pop light') {
-          int n0 = decodedWeight.indexOf('N0') + 2;
-          int kg = decodedWeight.indexOf('kg');
           decodedWeight = decodedWeight
-              .substring(n0, kg)
-              .trim()
+              .replaceAll('N0', '')
+              .replaceAll('kg', '')
               .replaceAll(',', '.')
               .trim();
-          enterListen = true;
         } else {
-          decodedWeight =
-              decodedWeight.substring(1, (decodedWeight.length - 1)).trim();
+          decodedWeight = decodedWeight
+              .replaceAll(RegExp(r'[^\d.]'), '');
         }
 
-        weight = ((double.parse(decodedWeight)) / factor);
-        weight = roundAbnt.roundAbnt('$weight', 3);
+        if (decodedWeight.length == 5) {
+          weight = ((double.parse(decodedWeight)) / factor);
+          weight = roundAbnt.roundAbnt('$weight', 3);
 
-        mapData['weight'] = ValueNotifier<double>(weight);
-        completer.complete(mapData['weight']?.value);
-        completer.future;
-      }
+          mapData['weight'] = ValueNotifier<double>(weight);
 
+          completer.complete(mapData['weight']?.value);
+          subscription?.cancel();
+        }
+      });
+
+      await Future.any([
+        completer.future,
+        Future.delayed(Duration(milliseconds: digitalScaleTimeout))
+      ]);
+
+      serialPort.close();
       return weight;
     } catch (e) {
-      if (kDebugMode) {
-        print('digital scale error: $e');
-      }
+      if (kDebugMode) print('digital scale error: $e');
+      serialPort.close();
+      subscription?.cancel();
       return -99.99;
     }
   }
