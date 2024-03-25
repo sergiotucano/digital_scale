@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:digital_scale/digital_scale.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
-import 'package:roundabnt/round_abnt.dart';
+import 'package:roundabnt/roundabnt.dart';
 
 class DigitalScale implements DigitalScaleImplementation {
   final String digitalScalePort;

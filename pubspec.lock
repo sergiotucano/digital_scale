@@ -159,10 +159,10 @@ packages:
     dependency: "direct main"
     description:
       name: roundabnt
-      sha256: fd209af0a0854bcc553f63baa00ff190698c18bbe82743e097ac04547cbe9189
+      sha256: "3388f98eacffa1d1507717b4bb70f2cebaeb973e31e545df1e8d4bfe5ec910aa"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.3+1"
+    version: "0.0.4+0"
   sky_engine:
     dependency: transitive
     description: flutter
