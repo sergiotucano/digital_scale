@@ -1,3 +1,6 @@
+## 0.0.6+2
+* Update roundabnt dependency
+
 ## 0.0.6+1
 * Fix Timeout and weight reader 
  
