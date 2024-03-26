@@ -115,7 +115,7 @@ class DigitalScale implements DigitalScaleImplementation {
   /// create the listener and return the weight
   @override
   Future<double> getWeight() async {
-    RoundAbnt roundAbnt = RoundAbnt();
+    final roundAbnt = RoundAbnt();
     Map<String, ValueNotifier<double>> mapData = {};
     var completer = Completer<double>();
     String decodedWeight = '';
@@ -139,7 +139,7 @@ class DigitalScale implements DigitalScaleImplementation {
 
         if (decodedWeight.length == 5) {
           weight = ((double.parse(decodedWeight)) / factor);
-          weight = roundAbnt.roundAbnt('$weight', 3);
+          weight = roundAbnt.roundAbnt(weight,3);
 
           mapData['weight'] = ValueNotifier<double>(weight);
 
