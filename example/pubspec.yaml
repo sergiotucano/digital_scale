@@ -2,7 +2,7 @@ name: example
 description: Example how to use the Digital Scale package
 publish_to: none
 
-version: 0.0.6+1
+version: 1.0.0+5
 
 environment:
   sdk: ">=2.17.6 <3.0.0"

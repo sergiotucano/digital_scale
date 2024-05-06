@@ -17,4 +17,7 @@ abstract class DigitalScaleImplementation {
 
   /// create the listener, get the weight and return in double format.
   Future<double> getWeight();
+
+  /// Error log
+  saveLogToFile(String log);
 }

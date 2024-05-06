@@ -47,10 +47,14 @@ void main() {
  - ### Elgin DP-1502
    - #### Configuration
      - Data1 300030
-     - Prog RS232 1130
-     - recommended timeout 6000 ms
+     - Prog RS232 1030
+     - recommended timeout 5000 ms
      
  - ### URANO POP LIGHT
    - #### Configuration    
        - stopbits 2
        - recommended timeout 4000 ms
+
+## Log Error
+ - Any error in weight reader, open or write port a log error will be create. 
+ - digital_scale_error.log in app directory

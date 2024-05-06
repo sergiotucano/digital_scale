@@ -1,3 +1,7 @@
+## 1.0.0+5
+* Fix Elgin DP1502 reader weight
+* Create log file error
+
 ## 0.0.6+3
 * Update dependency
 

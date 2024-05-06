@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:digital_scale/digital_scale.dart';
 import 'package:flutter/foundation.dart';
@@ -19,9 +20,9 @@ class DigitalScale implements DigitalScaleImplementation {
   /// initialize the serial port and call methods
   DigitalScale(
       {required this.digitalScalePort,
-      required this.digitalScaleModel,
-      required this.digitalScaleRate,
-      required this.digitalScaleTimeout,}) {
+        required this.digitalScaleModel,
+        required this.digitalScaleRate,
+        required this.digitalScaleTimeout,}) {
     serialPort = SerialPort(digitalScalePort);
 
     bool resp = open();
@@ -41,7 +42,11 @@ class DigitalScale implements DigitalScaleImplementation {
     if (serialPort.isOpen) {
       try {
         serialPort.close();
-      } catch (_) {}
+      } catch (e) {
+        try{
+          saveLogToFile('open port $e');
+        }catch(_){}
+      }
     }
 
     if (!serialPort.isOpen) {
@@ -82,7 +87,7 @@ class DigitalScale implements DigitalScaleImplementation {
         initString = String.fromCharCode(5) +
             String.fromCharCode(10) +
             String.fromCharCode(13);
-        factor = 1;
+        factor = 1000;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -101,7 +106,12 @@ class DigitalScale implements DigitalScaleImplementation {
   writeInPort(String value) {
     try {
       serialPort.write(utf8.encoder.convert(value));
-    } catch (_) {}
+    } catch (e) {
+      try{
+        saveLogToFile('write port $e');
+      }catch(_){}
+
+    }
   }
 
   /// read the port
@@ -109,7 +119,12 @@ class DigitalScale implements DigitalScaleImplementation {
   readPort() {
     try {
       serialPortReader = SerialPortReader(serialPort);
-    } catch (_) {}
+    } catch (e) {
+      try{
+        saveLogToFile('read port $e');
+      }catch(_){}
+
+    }
   }
 
   /// create the listener and return the weight
@@ -137,14 +152,16 @@ class DigitalScale implements DigitalScaleImplementation {
               .replaceAll(RegExp(r'[^\d.]'), '');
         }
 
-        if (decodedWeight.length == 5) {
-          weight = ((double.parse(decodedWeight)) / factor);
+        if (decodedWeight.length > 3) {
+
+          weight = ((double.parse(decodedWeight.trim())) / factor);
           weight = roundAbnt.roundAbnt(weight,3);
 
           mapData['weight'] = ValueNotifier<double>(weight);
 
           completer.complete(mapData['weight']?.value);
           subscription?.cancel();
+
         }
       });
 
@@ -154,12 +171,30 @@ class DigitalScale implements DigitalScaleImplementation {
       ]);
 
       serialPort.close();
-      return weight;
+
+      return 1.0 * weight;
+
     } catch (e) {
       if (kDebugMode) print('digital scale error: $e');
+
+      try{
+        await saveLogToFile('digital scale error: $e');
+      }catch(_){}
+
       serialPort.close();
       subscription?.cancel();
       return -99.99;
     }
+
   }
+
+  /// save log error in a file
+  @override
+  saveLogToFile(String log) {
+    final directory = Directory.current;
+    final file = File('${directory.path}/digital_scale_error.log');
+
+    file.writeAsStringSync('$log \n', mode: FileMode.append);
+  }
+
 }
