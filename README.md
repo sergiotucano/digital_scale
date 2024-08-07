@@ -24,6 +24,11 @@ import 'package:digital_scale/digital_scale.dart';
 ```dart
 void main() {
 
+  /// digital scale models to send in digitalScaleModel param:
+  /// Toledo Prix 3
+  /// Elgin DP1502
+  /// Urano
+
   /// call Digital Scale and pass arguments
   final digitalScale = DigitalScale(
       digitalScalePort: 'COM1',
@@ -50,11 +55,20 @@ void main() {
      - Prog RS232 1030
      - recommended timeout 5000 ms
      
- - ### URANO POP LIGHT
-   - #### Configuration    
-       - stopbits 2
-       - recommended timeout 4000 ms
-
+ - ### URANO
+   - ### URANO POP LIGHT
+     - #### Configuration
+         - stopbits 2
+         - recommended timeout 3000 ms
+   - ### URANO US20/2 POP-S
+     - #### Configuration
+       - Protocol USE-P2
+       - recommended timeout 3000 ms     
+   - ### URANO US31/2 POP-S
+     - #### Configuration
+       - Protocol USE-P2
+       - recommended timeout 3000 ms
+      
 ## Log Error
  - Any error in weight reader, open or write port a log error will be create. 
  - digital_scale_error.log in app directory

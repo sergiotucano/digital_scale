@@ -1,3 +1,6 @@
+## 1.0.1+6
+* Urano POP-S(US20/US31) homologation
+
 ## 1.0.0+5
 * Fix Elgin DP1502 reader weight
 * Create log file error

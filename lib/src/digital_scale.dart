@@ -18,11 +18,12 @@ class DigitalScale implements DigitalScaleImplementation {
   static String initString = '';
 
   /// initialize the serial port and call methods
-  DigitalScale(
-      {required this.digitalScalePort,
-        required this.digitalScaleModel,
-        required this.digitalScaleRate,
-        required this.digitalScaleTimeout,}) {
+  DigitalScale({
+    required this.digitalScalePort,
+    required this.digitalScaleModel,
+    required this.digitalScaleRate,
+    required this.digitalScaleTimeout,
+  }) {
     serialPort = SerialPort(digitalScalePort);
 
     bool resp = open();
@@ -43,9 +44,9 @@ class DigitalScale implements DigitalScaleImplementation {
       try {
         serialPort.close();
       } catch (e) {
-        try{
+        try {
           saveLogToFile('open port $e');
-        }catch(_){}
+        } catch (_) {}
       }
     }
 
@@ -73,7 +74,7 @@ class DigitalScale implements DigitalScaleImplementation {
         bits = 8;
         parity = 0;
         break;
-      case 'urano pop light':
+      case 'urano':
         initString = String.fromCharCode(5) +
             String.fromCharCode(10) +
             String.fromCharCode(13);
@@ -107,10 +108,9 @@ class DigitalScale implements DigitalScaleImplementation {
     try {
       serialPort.write(utf8.encoder.convert(value));
     } catch (e) {
-      try{
+      try {
         saveLogToFile('write port $e');
-      }catch(_){}
-
+      } catch (_) {}
     }
   }
 
@@ -120,10 +120,9 @@ class DigitalScale implements DigitalScaleImplementation {
     try {
       serialPortReader = SerialPortReader(serialPort);
     } catch (e) {
-      try{
+      try {
         saveLogToFile('read port $e');
-      }catch(_){}
-
+      } catch (_) {}
     }
   }
 
@@ -141,27 +140,28 @@ class DigitalScale implements DigitalScaleImplementation {
       subscription = serialPortReader.stream.listen((data) async {
         decodedWeight += utf8.decode(data);
 
-        if (digitalScaleModel.toLowerCase() == 'urano pop light') {
-          decodedWeight = decodedWeight
-              .replaceAll('N0', '')
-              .replaceAll('kg', '')
-              .replaceAll(',', '.')
-              .trim();
+        if (digitalScaleModel.toLowerCase().contains('urano')) {
+          int idxN0 = decodedWeight.indexOf('N0');
+          int idxKg = decodedWeight.indexOf('kg');
+
+          if (idxN0 > -1 && idxKg > -1) {
+            decodedWeight = decodedWeight
+                .substring(idxN0 + 2, idxKg)
+                .replaceAll(',', '.')
+                .trim();
+          }
         } else {
-          decodedWeight = decodedWeight
-              .replaceAll(RegExp(r'[^\d.]'), '');
+          decodedWeight = decodedWeight.replaceAll(RegExp(r'[^\d.]'), '');
         }
 
-        if (decodedWeight.length > 3) {
-
+        if (decodedWeight.length > 1) {
           weight = ((double.parse(decodedWeight.trim())) / factor);
-          weight = roundAbnt.roundAbnt(weight,3);
+          weight = roundAbnt.roundAbnt(weight, 3);
 
           mapData['weight'] = ValueNotifier<double>(weight);
 
           completer.complete(mapData['weight']?.value);
           subscription?.cancel();
-
         }
       });
 
@@ -173,19 +173,17 @@ class DigitalScale implements DigitalScaleImplementation {
       serialPort.close();
 
       return 1.0 * weight;
-
     } catch (e) {
       if (kDebugMode) print('digital scale error: $e');
 
-      try{
+      try {
         await saveLogToFile('digital scale error: $e');
-      }catch(_){}
+      } catch (_) {}
 
       serialPort.close();
       subscription?.cancel();
       return -99.99;
     }
-
   }
 
   /// save log error in a file
@@ -196,5 +194,4 @@ class DigitalScale implements DigitalScaleImplementation {
 
     file.writeAsStringSync('$log \n', mode: FileMode.append);
   }
-
 }

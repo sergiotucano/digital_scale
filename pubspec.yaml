@@ -1,7 +1,8 @@
 name: digital_scale
+version: 1.0.1+6
 description: This package was created to communicate with serial and digital scale in flutter
 homepage: https://github.com/sergiotucano/digital_scale
-version: 1.0.0+5
+author: Sergio Clemente
 
 environment:
   sdk: ">=2.17.6 <3.0.0"
