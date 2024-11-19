@@ -4,8 +4,7 @@
 
 # Digital Scale
 
-This package read a weight from digital scale by serial or usb port
-
+This package read a weight from digital scale by serial, usb or bluetooth port
 
 ## Installation
 
@@ -35,6 +34,7 @@ void main() {
       digitalScaleModel: 'toledo prix 3',
       digitalScaleRate: 9600,
       digitalScaleTimeout: 3000,
+      digitalScaleBt: false,
   );
 
   /// async return of weight

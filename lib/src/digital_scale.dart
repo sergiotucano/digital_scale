@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:digital_scale/digital_scale.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:roundabnt/roundabnt.dart';
 
@@ -16,6 +17,8 @@ class DigitalScale implements DigitalScaleImplementation {
   static late SerialPortReader serialPortReader;
   static int factor = 1;
   static String initString = '';
+  final bool digitalScaleBt;
+  static late BluetoothConnection connectionBt;
 
   /// initialize the serial port and call methods
   DigitalScale({
@@ -23,6 +26,7 @@ class DigitalScale implements DigitalScaleImplementation {
     required this.digitalScaleModel,
     required this.digitalScaleRate,
     required this.digitalScaleTimeout,
+    required this.digitalScaleBt,
   }) {
     serialPort = SerialPort(digitalScalePort);
 
@@ -104,9 +108,20 @@ class DigitalScale implements DigitalScaleImplementation {
 
   /// write enq in port
   @override
-  writeInPort(String value) {
+  writeInPort(String value) async{
     try {
-      serialPort.write(utf8.encoder.convert(value));
+      if (digitalScaleBt){
+
+        connectionBt = await BluetoothConnection.toAddress(digitalScalePort);
+
+        try {
+          connectionBt.output.add(utf8.encoder.convert(initString));
+          await connectionBt.output.allSent;
+        } catch (_) {}
+
+      } else {
+        serialPort.write(utf8.encoder.convert(value));
+      }
     } catch (e) {
       try {
         saveLogToFile('write port $e');
@@ -118,7 +133,11 @@ class DigitalScale implements DigitalScaleImplementation {
   @override
   readPort() {
     try {
-      serialPortReader = SerialPortReader(serialPort);
+
+      if (!digitalScaleBt){
+        serialPortReader = SerialPortReader(serialPort);
+      }
+
     } catch (e) {
       try {
         saveLogToFile('read port $e');
@@ -129,6 +148,7 @@ class DigitalScale implements DigitalScaleImplementation {
   /// create the listener and return the weight
   @override
   Future<double> getWeight() async {
+
     final roundAbnt = RoundAbnt();
     Map<String, ValueNotifier<double>> mapData = {};
     var completer = Completer<double>();
@@ -137,42 +157,74 @@ class DigitalScale implements DigitalScaleImplementation {
 
     try {
       double weight = 0.00;
-      subscription = serialPortReader.stream.listen((data) async {
-        decodedWeight += utf8.decode(data);
 
-        if (digitalScaleModel.toLowerCase().contains('urano')) {
-          int idxN0 = decodedWeight.indexOf('N0');
-          int idxKg = decodedWeight.indexOf('kg');
+      if (digitalScaleBt){
+        connectionBt.input?.listen((Uint8List data) {
+          decodedWeight = utf8.decode(data);
+          connectionBt.output.add(data);
+          connectionBt.finish();
 
-          if (idxN0 > -1 && idxKg > -1) {
-            decodedWeight = decodedWeight
-                .substring(idxN0 + 2, idxKg)
-                .replaceAll(',', '.')
-                .trim();
-          }
-        } else {
-          decodedWeight = decodedWeight.replaceAll(RegExp(r'[^\d.]'), '');
+        }).onDone(() { });
+
+        int idxN0 = decodedWeight.indexOf('N0');
+        int idxKg = decodedWeight.indexOf('kg');
+
+        if (idxN0 > -1 && idxKg > -1) {
+          decodedWeight = decodedWeight
+              .substring(idxN0 + 2, idxKg)
+              .replaceAll(',', '.')
+              .trim();
         }
 
         if (decodedWeight.length > 1) {
           weight = ((double.parse(decodedWeight.trim())) / factor);
           weight = roundAbnt.roundAbnt(weight, 3);
 
-          mapData['weight'] = ValueNotifier<double>(weight);
+          return (1.0 * weight);
 
-          completer.complete(mapData['weight']?.value);
-          subscription?.cancel();
         }
-      });
 
-      await Future.any([
-        completer.future,
-        Future.delayed(Duration(milliseconds: digitalScaleTimeout))
-      ]);
+      } else {
+        subscription = serialPortReader.stream.listen((data) async {
+          decodedWeight += utf8.decode(data);
 
-      serialPort.close();
+          if (digitalScaleModel.toLowerCase().contains('urano')) {
+            int idxN0 = decodedWeight.indexOf('N0');
+            int idxKg = decodedWeight.indexOf('kg');
 
-      return 1.0 * weight;
+            if (idxN0 > -1 && idxKg > -1) {
+              decodedWeight = decodedWeight
+                  .substring(idxN0 + 2, idxKg)
+                  .replaceAll(',', '.')
+                  .trim();
+            }
+          } else {
+            decodedWeight = decodedWeight.replaceAll(RegExp(r'[^\d.]'), '');
+          }
+
+          if (decodedWeight.length > 1) {
+            weight = ((double.parse(decodedWeight.trim())) / factor);
+            weight = roundAbnt.roundAbnt(weight, 3);
+
+            mapData['weight'] = ValueNotifier<double>(weight);
+
+            completer.complete(mapData['weight']?.value);
+            subscription?.cancel();
+          }
+        });
+
+        await Future.any([
+          completer.future,
+          Future.delayed(Duration(milliseconds: digitalScaleTimeout))
+        ]);
+
+        serialPort.close();
+
+        return 1.0 * weight;
+      }
+
+      return -99.99;
+
     } catch (e) {
       if (kDebugMode) print('digital scale error: $e');
 

@@ -10,6 +10,7 @@ void main() {
       digitalScaleModel: 'toledo prix 3',
       digitalScaleRate: 9600,
       digitalScaleTimeout: 3000,
+      digitalScaleBt: false,
   );
 
   /// async return of weight

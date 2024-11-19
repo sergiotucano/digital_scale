@@ -1,3 +1,6 @@
+## 1.0.2+7
+* Add bluetooth communication
+
 ## 1.0.1+6
 * Urano POP-S(US20/US31) homologation
 
