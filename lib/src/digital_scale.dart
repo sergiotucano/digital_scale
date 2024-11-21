@@ -28,9 +28,14 @@ class DigitalScale implements DigitalScaleImplementation {
     required this.digitalScaleTimeout,
     required this.digitalScaleBt,
   }) {
-    serialPort = SerialPort(digitalScalePort);
 
-    bool resp = open();
+    bool resp = true;
+
+    if (!digitalScaleBt) {
+      serialPort = SerialPort(digitalScalePort);
+
+      resp = open();
+    }
 
     if (resp) {
       try {
@@ -98,28 +103,21 @@ class DigitalScale implements DigitalScaleImplementation {
         parity = 0;
     }
 
-    SerialPortConfig config = serialPort.config;
-    config.baudRate = digitalScaleRate;
-    config.stopBits = stopBits;
-    config.bits = bits;
-    config.parity = parity;
-    serialPort.config = config;
+    if (!digitalScaleBt) {
+      SerialPortConfig config = serialPort.config;
+      config.baudRate = digitalScaleRate;
+      config.stopBits = stopBits;
+      config.bits = bits;
+      config.parity = parity;
+      serialPort.config = config;
+    }
   }
 
   /// write enq in port
   @override
-  writeInPort(String value) async{
+  Future<void> writeInPort(String value) async{
     try {
-      if (digitalScaleBt){
-
-        connectionBt = await BluetoothConnection.toAddress(digitalScalePort);
-
-        try {
-          connectionBt.output.add(utf8.encoder.convert(initString));
-          await connectionBt.output.allSent;
-        } catch (_) {}
-
-      } else {
+      if (!digitalScaleBt){
         serialPort.write(utf8.encoder.convert(value));
       }
     } catch (e) {
@@ -159,30 +157,45 @@ class DigitalScale implements DigitalScaleImplementation {
       double weight = 0.00;
 
       if (digitalScaleBt){
+
+        connectionBt = await BluetoothConnection.toAddress(digitalScalePort);
+
+        try {
+          connectionBt.output.add(utf8.encoder.convert(initString));
+          await connectionBt.output.allSent;
+        } catch (_) {}
+
         connectionBt.input?.listen((Uint8List data) {
           decodedWeight = utf8.decode(data);
           connectionBt.output.add(data);
           connectionBt.finish();
 
-        }).onDone(() { });
+        }).onDone(() {
+          int idxN0 = decodedWeight.indexOf('N0');
+          int idxKg = decodedWeight.indexOf('kg');
 
-        int idxN0 = decodedWeight.indexOf('N0');
-        int idxKg = decodedWeight.indexOf('kg');
+          if (idxN0 > -1 && idxKg > -1) {
+            decodedWeight = decodedWeight
+                .substring(idxN0 + 2, idxKg)
+                .replaceAll(',', '.')
+                .trim();
+          }
 
-        if (idxN0 > -1 && idxKg > -1) {
-          decodedWeight = decodedWeight
-              .substring(idxN0 + 2, idxKg)
-              .replaceAll(',', '.')
-              .trim();
-        }
+          if (decodedWeight.length > 1) {
+            weight = ((double.parse(decodedWeight.trim())) / factor);
+            weight = roundAbnt.roundAbnt(weight, 3);
+          }
 
-        if (decodedWeight.length > 1) {
-          weight = ((double.parse(decodedWeight.trim())) / factor);
-          weight = roundAbnt.roundAbnt(weight, 3);
+          completer.complete(weight);
 
-          return (1.0 * weight);
+        });
 
-        }
+        await Future.any([
+          completer.future,
+          Future.delayed(Duration(milliseconds: digitalScaleTimeout))
+        ]);
+
+        return 1.0 * weight;
 
       } else {
         subscription = serialPortReader.stream.listen((data) async {
@@ -232,8 +245,10 @@ class DigitalScale implements DigitalScaleImplementation {
         await saveLogToFile('digital scale error: $e');
       } catch (_) {}
 
-      serialPort.close();
-      subscription?.cancel();
+      if (!digitalScaleBt) {
+        serialPort.close();
+        subscription?.cancel();
+      }
       return -99.99;
     }
   }
