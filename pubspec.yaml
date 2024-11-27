@@ -12,7 +12,6 @@ dependencies:
   roundabnt: ^1.0.2+0
   flutter_libserialport: ^0.3.0
   flutter_bluetooth_serial: ^0.4.0
-  win_ble: ^0.0.5
 
 dev_dependencies:
   flutter_test:
