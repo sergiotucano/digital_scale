@@ -35,12 +35,22 @@ void main() {
       digitalScaleRate: 9600,
       digitalScaleTimeout: 3000,
       digitalScaleBt: false,
+      continuosRead: false,
   );
 
   /// async return of weight
   digitalScale.getWeight().then((resp) => print('weight $resp'));
 }
 ```
+
+## Digital Scale Params
+    ### digitalScalePort : Com port for communication
+    ### digitalScaleModel : Model of Digital Scale (See below)
+    ### digitalScaleRate : bit rat of communication
+    ### digitalScaleTimeout : Timeout of communication
+    ### digitalScaleBt : If digital scale is a bluetooth device
+    ### continuosRead : if use continuous read protocol
+
 
 ## Digital Scales tested
 

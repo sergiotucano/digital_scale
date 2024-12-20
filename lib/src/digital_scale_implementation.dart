@@ -20,4 +20,7 @@ abstract class DigitalScaleImplementation {
 
   /// Error log
   saveLogToFile(String log);
+
+  /// close serial port
+  closeSerialPort();
 }

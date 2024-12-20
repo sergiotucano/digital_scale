@@ -11,6 +11,7 @@ void main() {
       digitalScaleRate: 9600,
       digitalScaleTimeout: 3000,
       digitalScaleBt: false,
+      continuosRead: false,
   );
 
   /// async return of weight

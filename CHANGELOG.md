@@ -1,5 +1,8 @@
+## 1.0.3+0
+* Add continuos read protocol
+
 ## 1.0.2+7
-* Add bluetooth communication
+* Add bluetooth communication for Android only
 
 ## 1.0.1+6
 * Urano POP-S(US20/US31) homologation

@@ -18,6 +18,7 @@ class DigitalScale implements DigitalScaleImplementation {
   static int factor = 1;
   static String initString = '';
   final bool digitalScaleBt;
+  final bool continuosRead;
   static late BluetoothConnection connectionBt;
 
   /// initialize the serial port and call methods
@@ -27,6 +28,7 @@ class DigitalScale implements DigitalScaleImplementation {
     required this.digitalScaleRate,
     required this.digitalScaleTimeout,
     required this.digitalScaleBt,
+    required this.continuosRead,
   }) {
 
     bool resp = true;
@@ -40,7 +42,11 @@ class DigitalScale implements DigitalScaleImplementation {
     if (resp) {
       try {
         config();
-        writeInPort(initString);
+
+        if (!continuosRead) {
+          writeInPort(initString);
+        }
+
         readPort();
       } catch (_) {}
     }
@@ -51,7 +57,7 @@ class DigitalScale implements DigitalScaleImplementation {
   bool open() {
     if (serialPort.isOpen) {
       try {
-        serialPort.close();
+        closeSerialPort();
       } catch (e) {
         try {
           saveLogToFile('open port $e');
@@ -78,7 +84,7 @@ class DigitalScale implements DigitalScaleImplementation {
     switch (digitalScaleModel.toLowerCase()) {
       case 'toledo prix 3':
         initString = String.fromCharCode(5) + String.fromCharCode(13);
-        factor = 1000;
+        factor = continuosRead? 1 : 1000;
         stopBits = 1;
         bits = 8;
         parity = 0;
@@ -171,14 +177,24 @@ class DigitalScale implements DigitalScaleImplementation {
           connectionBt.finish();
 
         }).onDone(() {
-          int idxN0 = decodedWeight.indexOf('N0');
-          int idxKg = decodedWeight.indexOf('kg');
+          if (continuosRead){
 
-          if (idxN0 > -1 && idxKg > -1) {
-            decodedWeight = decodedWeight
-                .substring(idxN0 + 2, idxKg)
-                .replaceAll(',', '.')
-                .trim();
+            try {
+              decodedWeight = decodedWeight
+                  .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
+            } catch(_){};
+
+          } else {
+            int idxN0 = decodedWeight.indexOf('N0');
+            int idxKg = decodedWeight.indexOf('kg');
+
+            if (idxN0 > -1 && idxKg > -1) {
+              decodedWeight = decodedWeight
+                  .substring(idxN0 + 2, idxKg)
+                  .replaceAll(',', '.')
+                  .trim();
+            }
+
           }
 
           if (decodedWeight.length > 1) {
@@ -198,31 +214,54 @@ class DigitalScale implements DigitalScaleImplementation {
         return 1.0 * weight;
 
       } else {
+
         subscription = serialPortReader.stream.listen((data) async {
           decodedWeight += utf8.decode(data);
 
-          if (digitalScaleModel.toLowerCase().contains('urano')) {
-            int idxN0 = decodedWeight.indexOf('N0');
-            int idxKg = decodedWeight.indexOf('kg');
-
-            if (idxN0 > -1 && idxKg > -1) {
-              decodedWeight = decodedWeight
-                  .substring(idxN0 + 2, idxKg)
-                  .replaceAll(',', '.')
-                  .trim();
-            }
-          } else {
-            decodedWeight = decodedWeight.replaceAll(RegExp(r'[^\d.]'), '');
-          }
-
-          if (decodedWeight.length > 1) {
-            weight = ((double.parse(decodedWeight.trim())) / factor);
-            weight = roundAbnt.roundAbnt(weight, 3);
-
+          if (decodedWeight.isEmpty){
+            weight = 0.0;
             mapData['weight'] = ValueNotifier<double>(weight);
 
             completer.complete(mapData['weight']?.value);
             subscription?.cancel();
+
+          } else {
+
+            if (continuosRead){
+
+              try {
+                decodedWeight = decodedWeight
+                    .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
+              } catch(_){};
+
+            } else {
+              if (digitalScaleModel.toLowerCase().contains('urano')) {
+                int idxN0 = decodedWeight.indexOf('N0');
+                int idxKg = decodedWeight.indexOf('kg');
+
+                if (idxN0 > -1 && idxKg > -1) {
+                  decodedWeight = decodedWeight
+                      .substring(idxN0 + 2, idxKg)
+                      .replaceAll(',', '.')
+                      .trim();
+                }
+              } else {
+                try {
+                  decodedWeight = decodedWeight
+                      .replaceAll(RegExp(r'[^\d.]'), '');
+                } catch(_){};
+              }
+            }
+
+            if (decodedWeight.length > 1) {
+              weight = ((double.parse(decodedWeight.trim())) / factor);
+              weight = roundAbnt.roundAbnt(weight, 3);
+
+              mapData['weight'] = ValueNotifier<double>(weight);
+
+              completer.complete(mapData['weight']?.value);
+              subscription?.cancel();
+            }
           }
         });
 
@@ -231,12 +270,10 @@ class DigitalScale implements DigitalScaleImplementation {
           Future.delayed(Duration(milliseconds: digitalScaleTimeout))
         ]);
 
-        serialPort.close();
+        closeSerialPort();
 
         return 1.0 * weight;
       }
-
-      return -99.99;
 
     } catch (e) {
       if (kDebugMode) print('digital scale error: $e');
@@ -246,11 +283,19 @@ class DigitalScale implements DigitalScaleImplementation {
       } catch (_) {}
 
       if (!digitalScaleBt) {
-        serialPort.close();
+        closeSerialPort();
         subscription?.cancel();
       }
       return -99.99;
     }
+  }
+
+  /// close serial port
+  @override
+  closeSerialPort() {
+    try{
+      serialPort.close();
+    } catch(_){}
   }
 
   /// save log error in a file
