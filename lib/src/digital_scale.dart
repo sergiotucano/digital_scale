@@ -182,7 +182,7 @@ class DigitalScale implements DigitalScaleImplementation {
             try {
               decodedWeight = decodedWeight
                   .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
-            } catch(_){};
+            } catch(_){}
 
           } else {
             int idxN0 = decodedWeight.indexOf('N0');
@@ -232,7 +232,7 @@ class DigitalScale implements DigitalScaleImplementation {
               try {
                 decodedWeight = decodedWeight
                     .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
-              } catch(_){};
+              } catch(_){}
 
             } else {
               if (digitalScaleModel.toLowerCase().contains('urano')) {
@@ -249,7 +249,7 @@ class DigitalScale implements DigitalScaleImplementation {
                 try {
                   decodedWeight = decodedWeight
                       .replaceAll(RegExp(r'[^\d.]'), '');
-                } catch(_){};
+                } catch(_){}
               }
             }
 
