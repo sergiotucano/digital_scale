@@ -5,25 +5,25 @@ packages:
     dependency: transitive
     description:
       name: characters
-      sha256: e6a326c8af69605aec75ed6c187d06b349707a27fbff8222ca9cc2cff167975c
+      sha256: f71061c654a3380576a52b451dd5532377954cf9dbd272a78fc8479606670803
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.1"
+    version: "1.4.0"
   collection:
     dependency: transitive
     description:
       name: collection
-      sha256: cfc915e6923fe5ce6e153b0723c753045de46de1b4d63771530504004a45fae0
+      sha256: "2f5709ae4d3d59dd8f7cd309b4e023046b57d8a6c82130785d2b0e5868084e76"
       url: "https://pub.dev"
     source: hosted
-    version: "1.17.0"
+    version: "1.19.1"
   digital_scale:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.0.2+7"
+    version: "1.0.3+0"
   dylib:
     dependency: transitive
     description:
@@ -45,30 +45,22 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_bluetooth_serial:
+  flutter_bluetooth_serial_plus:
     dependency: transitive
     description:
-      name: flutter_bluetooth_serial
-      sha256: "85ae82c4099b2b1facdc54e75e1bcfa88dc7f719e55dc886bb0b648cb16636b1"
+      name: flutter_bluetooth_serial_plus
+      sha256: "0655dfe4eb426f7e62ff49183c9ffbe423638f8546fc4cfa4681f3619d5a7db3"
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.0"
+    version: "0.5.1"
   flutter_libserialport:
     dependency: transitive
     description:
       name: flutter_libserialport
-      sha256: "34cc4909eaa5b1502b9e1ad5a7dc597542f009d9adfa37c9a86ae0fb0d3b13fa"
+      sha256: f24b5fe6f1821d1c1b3bf2be737ca53f6b0ae78657032a790aa00abb810c8759
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.0"
-  js:
-    dependency: transitive
-    description:
-      name: js
-      sha256: "5528c2f391ededb7775ec1daa69e65a2d61276f7552de2b5f7b8d34ee9fd4ab7"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.6.5"
+    version: "0.6.0"
   libserialport:
     dependency: transitive
     description:
@@ -81,18 +73,18 @@ packages:
     dependency: transitive
     description:
       name: material_color_utilities
-      sha256: d92141dc6fe1dad30722f9aa826c7fbc896d021d792f80678280601aff8cf724
+      sha256: f7142bb1154231d7ea5f96bc7bde4bda2a0945d2806bb11670e30b850d56bdec
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.0"
+    version: "0.11.1"
   meta:
     dependency: transitive
     description:
       name: meta
-      sha256: "6c268b42ed578a53088d834796959e4a1814b5e9e164f147f580a386e5decf42"
+      sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
       url: "https://pub.dev"
     source: hosted
-    version: "1.8.0"
+    version: "1.16.0"
   path:
     dependency: transitive
     description:
@@ -113,15 +105,15 @@ packages:
     dependency: transitive
     description:
       name: roundabnt
-      sha256: "50c01ce90c1cb760c1cff725d2d7beeb9a7e582ec8bdf7d928851918281d1ef7"
+      sha256: "1e2890705b1e4af49d3842aac73bb7dfa24e238e5fc8156f97a6932e333ce26d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.2+0"
+    version: "1.0.4+2"
   sky_engine:
     dependency: transitive
     description: flutter
     source: sdk
-    version: "0.0.99"
+    version: "0.0.0"
   vector_math:
     dependency: transitive
     description:
@@ -131,5 +123,5 @@ packages:
     source: hosted
     version: "2.1.4"
 sdks:
-  dart: ">=2.17.6 <3.0.0"
+  dart: ">=3.7.0-0 <4.0.0"
   flutter: ">=3.0.0"

@@ -1,3 +1,6 @@
+## 1.1.0+0
+* upgrade dependencies
+
 ## 1.0.3+0
 * Add continuos read protocol
 

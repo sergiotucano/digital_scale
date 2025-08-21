@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:digital_scale/digital_scale.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter_bluetooth_serial_plus/flutter_bluetooth_serial_plus.dart';
 import 'package:flutter_libserialport/flutter_libserialport.dart';
 import 'package:roundabnt/roundabnt.dart';
 
