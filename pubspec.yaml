@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   roundabnt: ^1.0.4+2
-  flutter_libserialport: ^0.6.0
+  flutter_libserialport: ^0.3.0
   flutter_bluetooth_serial_plus: ^0.5.1
 
 dev_dependencies:
