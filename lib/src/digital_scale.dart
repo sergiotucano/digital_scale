@@ -168,7 +168,7 @@ class DigitalScale implements DigitalScaleImplementation {
         if (now - lastActivity > inactivityTimeoutMs) {
           break;
         }
-        await Future.delayed(Duration(milliseconds: pollIntervalMs));
+        await Future.delayed(const Duration(milliseconds: pollIntervalMs));
       }
 
       final text = buffer.toString();
@@ -204,7 +204,8 @@ class DigitalScale implements DigitalScaleImplementation {
 
         if (continuosRead) {
           try {
-            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '').substring(0, 6);
+            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '').
+            substring(0, 6);
           } catch (_) {}
         } else {
           int idxN0 = decoded.indexOf('N0');
@@ -240,7 +241,9 @@ class DigitalScale implements DigitalScaleImplementation {
 
         final rawResponse = await _readDirectSerial();
 
-        saveLogToFile('1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal');
+        saveLogToFile(
+          '1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal'
+        );
 
         String decoded = rawResponse;
 
