@@ -14,12 +14,12 @@ class DigitalScale implements DigitalScaleImplementation {
   final int digitalScaleRate;
   final int digitalScaleTimeout;
   static late SerialPort serialPort;
-  static late SerialPortReader serialPortReader;
   static int factor = 1;
   static String initString = '';
   final bool digitalScaleBt;
   final bool continuosRead;
   static late BluetoothConnection connectionBt;
+  final bool saveLogFile;
 
   /// initialize the serial port and call methods
   DigitalScale({
@@ -29,25 +29,18 @@ class DigitalScale implements DigitalScaleImplementation {
     required this.digitalScaleTimeout,
     required this.digitalScaleBt,
     required this.continuosRead,
+    required this.saveLogFile,
   }) {
-
     bool resp = true;
 
     if (!digitalScaleBt) {
       serialPort = SerialPort(digitalScalePort);
-
       resp = open();
     }
 
     if (resp) {
       try {
         config();
-
-        if (!continuosRead) {
-          writeInPort(initString);
-        }
-
-        readPort();
       } catch (_) {}
     }
   }
@@ -60,7 +53,7 @@ class DigitalScale implements DigitalScaleImplementation {
         closeSerialPort();
       } catch (e) {
         try {
-          saveLogToFile('open port $e');
+          saveLogToFile('open port $e', 'error');
         } catch (_) {}
       }
     }
@@ -84,11 +77,20 @@ class DigitalScale implements DigitalScaleImplementation {
     switch (digitalScaleModel.toLowerCase()) {
       case 'toledo prix 3':
         initString = String.fromCharCode(5) + String.fromCharCode(13);
-        factor = continuosRead? 1 : 1000;
+        factor = continuosRead ? 1 : 1000;
         stopBits = 1;
         bits = 8;
         parity = 0;
         break;
+
+      case 'upx':
+        initString = String.fromCharCode(5);
+        factor = 1;
+        stopBits = 1;
+        bits = 8;
+        parity = 0;
+        break;
+
       case 'urano':
         initString = String.fromCharCode(5) +
             String.fromCharCode(10) +
@@ -98,6 +100,7 @@ class DigitalScale implements DigitalScaleImplementation {
         bits = 8;
         parity = 0;
         break;
+
       case 'elgin dp1502':
       default:
         initString = String.fromCharCode(5) +
@@ -115,195 +118,218 @@ class DigitalScale implements DigitalScaleImplementation {
       config.stopBits = stopBits;
       config.bits = bits;
       config.parity = parity;
+      config.dtr = 0;
+      config.rts = 0;
       serialPort.config = config;
     }
   }
 
   /// write enq in port
   @override
-  Future<void> writeInPort(String value) async{
+  Future<void> writeInPort(String value) async {
     try {
-      if (!digitalScaleBt){
+      if (!digitalScaleBt) {
+        serialPort.flush();
         serialPort.write(utf8.encoder.convert(value));
       }
     } catch (e) {
       try {
-        saveLogToFile('write port $e');
+        saveLogToFile('write port $e', 'error');
       } catch (_) {}
     }
   }
 
-  /// read the port
-  @override
-  readPort() {
-    try {
+  /// DIRECT READ — NO STREAM — POLLING
+  Future<String> _readDirectSerial() async {
+    final StringBuffer buffer = StringBuffer();
 
-      if (!digitalScaleBt){
-        serialPortReader = SerialPortReader(serialPort);
+    const int inactivityTimeoutMs = 300;
+    const int pollIntervalMs = 10;
+    const int maxBytes = 4096;
+
+    final int startTotal = DateTime.now().millisecondsSinceEpoch;
+    int lastActivity = startTotal;
+
+    while (true) {
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - startTotal > digitalScaleTimeout) {
+        break;
       }
 
-    } catch (e) {
-      try {
-        saveLogToFile('read port $e');
-      } catch (_) {}
+      final bytes = serialPort.read(512);
+
+      if (bytes != null && bytes.isNotEmpty) {
+        buffer.write(utf8.decode(bytes, allowMalformed: true));
+        lastActivity = now;
+
+        if (buffer.length > maxBytes) break;
+      } else {
+        if (now - lastActivity > inactivityTimeoutMs) {
+          break;
+        }
+        await Future.delayed(Duration(milliseconds: pollIntervalMs));
+      }
+
+      final text = buffer.toString();
+      if (text.contains('\n') || text.contains('\r')) break;
     }
+
+    return buffer.toString();
   }
 
-  /// create the listener and return the weight
+  /// create the reader and return the weight
   @override
   Future<double> getWeight() async {
-
     final roundAbnt = RoundAbnt();
-    Map<String, ValueNotifier<double>> mapData = {};
-    var completer = Completer<double>();
-    String decodedWeight = '';
-    StreamSubscription? subscription;
+    double weight = 0.0;
 
     try {
-      double weight = 0.00;
-
-      if (digitalScaleBt){
-
+      //-----------------------------
+      // BLUETOOTH
+      //-----------------------------
+      if (digitalScaleBt) {
         connectionBt = await BluetoothConnection.toAddress(digitalScalePort);
 
-        try {
-          connectionBt.output.add(utf8.encoder.convert(initString));
-          await connectionBt.output.allSent;
-        } catch (_) {}
+        connectionBt.output.add(utf8.encoder.convert(initString));
+        await connectionBt.output.allSent;
 
-        connectionBt.input?.listen((Uint8List data) {
-          decodedWeight = utf8.decode(data);
-          connectionBt.output.add(data);
-          connectionBt.finish();
+        Uint8List raw = Uint8List(0);
 
-        }).onDone(() {
-          if (continuosRead){
+        await connectionBt.input?.first.then((value) {
+          raw = value;
+        });
 
-            try {
-              decodedWeight = decodedWeight
-                  .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
-            } catch(_){}
+        String decoded = utf8.decode(raw);
 
-          } else {
-            int idxN0 = decodedWeight.indexOf('N0');
-            int idxKg = decodedWeight.indexOf('kg');
+        if (continuosRead) {
+          try {
+            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '').substring(0, 6);
+          } catch (_) {}
+        } else {
+          int idxN0 = decoded.indexOf('N0');
+          int idxKg = decoded.indexOf('kg');
+
+          if (idxN0 > -1 && idxKg > -1) {
+            decoded = decoded
+                .substring(idxN0 + 2, idxKg)
+                .replaceAll(',', '.')
+                .trim();
+          }
+        }
+
+        if (decoded.length > 1) {
+          weight = double.parse(decoded) / factor;
+          weight = roundAbnt.roundAbnt(weight, 3);
+        }
+
+        return weight;
+      }
+
+      // deadline timeout total
+      final deadline = DateTime.now()
+          .add(Duration(milliseconds: digitalScaleTimeout));
+
+      //-----------------------------
+      // SERIAL — DIRECT READ
+      //-----------------------------
+
+      saveLogToFile('0 - inicio leitura direta ${DateTime.now()}', 'normal');
+      while (DateTime.now().isBefore(deadline)) {
+        await writeInPort(initString);
+
+        final rawResponse = await _readDirectSerial();
+
+        saveLogToFile('1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal');
+
+        String decoded = rawResponse;
+
+        // CONTINUOS
+        if (continuosRead) {
+          try {
+            decoded =
+                decoded.replaceAll(RegExp(r'[^\d.]'), '').substring(0, 6);
+          } catch (_) {}
+        }
+
+        // URANO / TOLEDO / OTHERS
+        else {
+          if (digitalScaleModel.toLowerCase().contains('urano')) {
+            int idxN0 = decoded.indexOf('N0');
+            int idxKg = decoded.indexOf('kg');
 
             if (idxN0 > -1 && idxKg > -1) {
-              decodedWeight = decodedWeight
+              decoded = decoded
                   .substring(idxN0 + 2, idxKg)
                   .replaceAll(',', '.')
                   .trim();
             }
-
-          }
-
-          if (decodedWeight.length > 1) {
-            weight = ((double.parse(decodedWeight.trim())) / factor);
-            weight = roundAbnt.roundAbnt(weight, 3);
-          }
-
-          completer.complete(weight);
-
-        });
-
-        await Future.any([
-          completer.future,
-          Future.delayed(Duration(milliseconds: digitalScaleTimeout))
-        ]);
-
-        return 1.0 * weight;
-
-      } else {
-
-        subscription = serialPortReader.stream.listen((data) async {
-          decodedWeight += utf8.decode(data);
-
-          if (decodedWeight.isEmpty){
-            weight = 0.0;
-            mapData['weight'] = ValueNotifier<double>(weight);
-
-            completer.complete(mapData['weight']?.value);
-            subscription?.cancel();
-
           } else {
-
-            if (continuosRead){
-
-              try {
-                decodedWeight = decodedWeight
-                    .replaceAll(RegExp(r'[^\d.]'), '').substring(0,6);
-              } catch(_){}
-
-            } else {
-              if (digitalScaleModel.toLowerCase().contains('urano')) {
-                int idxN0 = decodedWeight.indexOf('N0');
-                int idxKg = decodedWeight.indexOf('kg');
-
-                if (idxN0 > -1 && idxKg > -1) {
-                  decodedWeight = decodedWeight
-                      .substring(idxN0 + 2, idxKg)
-                      .replaceAll(',', '.')
-                      .trim();
-                }
-              } else {
-                try {
-                  decodedWeight = decodedWeight
-                      .replaceAll(RegExp(r'[^\d.]'), '');
-                } catch(_){}
-              }
-            }
-
-            if (decodedWeight.length > 1) {
-              weight = ((double.parse(decodedWeight.trim())) / factor);
-              weight = roundAbnt.roundAbnt(weight, 3);
-
-              mapData['weight'] = ValueNotifier<double>(weight);
-
-              completer.complete(mapData['weight']?.value);
-              subscription?.cancel();
-            }
+            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '');
           }
-        });
+        }
 
-        await Future.any([
-          completer.future,
-          Future.delayed(Duration(milliseconds: digitalScaleTimeout))
-        ]);
+        if (decoded.isEmpty) {
+          await Future.delayed(const Duration(milliseconds: 20));
+          continue;
+        }
 
-        closeSerialPort();
+        try {
+          weight = double.parse(decoded) / factor;
+          weight = roundAbnt.roundAbnt(weight, 3);
+        } catch (_) {
+          weight = 0.0;
+        }
 
-        return 1.0 * weight;
+        if (weight == 0.0) {
+          await Future.delayed(const Duration(milliseconds: 20));
+          continue;
+        }
+
+        break;
       }
+      closeSerialPort();
 
+      saveLogToFile('2 - weight → $weight', 'normal');
+
+      return weight;
     } catch (e) {
       if (kDebugMode) print('digital scale error: $e');
 
       try {
-        await saveLogToFile('digital scale error: $e');
+        await saveLogToFile('digital scale error: $e','error');
       } catch (_) {}
 
-      if (!digitalScaleBt) {
-        closeSerialPort();
-        subscription?.cancel();
-      }
+      closeSerialPort();
       return -99.99;
     }
   }
 
-  /// close serial port
   @override
   closeSerialPort() {
-    try{
+    try {
       serialPort.close();
-    } catch(_){}
+    } catch (_) {}
   }
 
-  /// save log error in a file
   @override
-  saveLogToFile(String log) {
-    final directory = Directory.current;
-    final file = File('${directory.path}/digital_scale_error.log');
+  saveLogToFile(String log, String mode) {
+    bool canSavelog = true;
 
-    file.writeAsStringSync('$log \n', mode: FileMode.append);
+    if (mode == 'normal' && !saveLogFile){
+      canSavelog = false;
+    }
+
+    if (canSavelog) {
+      final fileName = mode == 'error'
+          ? 'digital_scale_error.log'
+          : 'digital_scale.log';
+      final directory = Directory.current;
+      final file = File('${directory.path}/Logs/$fileName');
+      file.writeAsStringSync('$log \n', mode: FileMode.append);
+    }
+
+    if (kDebugMode) print(log);
+
   }
 }

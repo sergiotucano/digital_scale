@@ -1,3 +1,7 @@
+## 1.2.0+0
+* UPX EA-20 and EA-32 homologation
+* modify read stream method for best performance
+
 ## 1.1.0+0
 * upgrade dependencies
 

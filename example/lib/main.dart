@@ -12,6 +12,7 @@ void main() {
       digitalScaleTimeout: 3000,
       digitalScaleBt: false,
       continuosRead: false,
+      saveLogFile: true,
   );
 
   /// async return of weight

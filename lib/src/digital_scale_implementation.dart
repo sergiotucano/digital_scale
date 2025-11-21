@@ -12,14 +12,11 @@ abstract class DigitalScaleImplementation {
   /// write in serial port the enq byte
   writeInPort(String value);
 
-  /// read the port
-  readPort();
-
   /// create the listener, get the weight and return in double format.
   Future<double> getWeight();
 
   /// Error log
-  saveLogToFile(String log);
+  saveLogToFile(String log, String mode);
 
   /// close serial port
   closeSerialPort();

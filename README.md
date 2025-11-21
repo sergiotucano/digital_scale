@@ -27,6 +27,7 @@ void main() {
   /// Toledo Prix 3
   /// Elgin DP1502
   /// Urano
+  /// upx
 
   /// call Digital Scale and pass arguments
   final digitalScale = DigitalScale(
@@ -36,6 +37,7 @@ void main() {
       digitalScaleTimeout: 3000,
       digitalScaleBt: false,
       continuosRead: false,
+      saveLogFile: true
   );
 
   /// async return of weight
@@ -50,6 +52,7 @@ void main() {
     ### digitalScaleTimeout : Timeout of communication
     ### digitalScaleBt : If digital scale is a bluetooth device
     ### continuosRead : if use continuous read protocol
+    ### saveLogFile : if package will save data in log file for debug
 
 
 ## Digital Scales tested
@@ -78,7 +81,14 @@ void main() {
      - #### Configuration
        - Protocol USE-P2
        - recommended timeout 3000 ms
-      
+
+ - ### UPX EA-23 / EA-32
+   - #### Configuration
+       - tIPo Prot 3
+       - Cont 0 (continuos) or 1 (ENQ)
+       - EnCod 0
+       - nEG 0
+     
 ## Log Error
  - Any error in weight reader, open or write port a log error will be create. 
  - digital_scale_error.log in app directory
