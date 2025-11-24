@@ -1,3 +1,6 @@
+## 1.2.0+1
+* improve code for continuous reading and fix upx 20 code.
+ 
 ## 1.2.0+0
 * UPX EA-20 and EA-32 homologation
 * modify read stream method for best performance

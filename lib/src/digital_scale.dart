@@ -83,7 +83,7 @@ class DigitalScale implements DigitalScaleImplementation {
         parity = 0;
         break;
 
-      case 'upx32':
+      case 'upx 32':
         initString = String.fromCharCode(5);
         factor = 1;
         stopBits = 1;
@@ -91,7 +91,7 @@ class DigitalScale implements DigitalScaleImplementation {
         parity = 0;
         break;
 
-      case 'upx20':
+      case 'upx 20':
         initString = String.fromCharCode(5);
         factor = 1000;
         stopBits = 1;
@@ -167,11 +167,13 @@ class DigitalScale implements DigitalScaleImplementation {
 
       final bytes = serialPort.read(512);
 
-      if (bytes != null && bytes.isNotEmpty) {
+      if (bytes.isNotEmpty) {
         buffer.write(utf8.decode(bytes, allowMalformed: true));
         lastActivity = now;
 
-        if (buffer.length > maxBytes) break;
+        if (buffer.length > maxBytes){
+          break;
+        }
       } else {
         if (now - lastActivity > inactivityTimeoutMs) {
           break;
@@ -180,7 +182,16 @@ class DigitalScale implements DigitalScaleImplementation {
       }
 
       final text = buffer.toString();
-      if (text.contains('\n') || text.contains('\r')) break;
+      if (text.contains('\n') || text.contains('\r')){
+        break;
+      }
+
+      if (continuosRead){
+        if (now - startTotal > inactivityTimeoutMs) {
+          break;
+        }
+      }
+
     }
 
     return buffer.toString();
@@ -250,33 +261,42 @@ class DigitalScale implements DigitalScaleImplementation {
         final rawResponse = await _readDirectSerial();
 
         saveLogToFile(
-          '1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal'
+            '1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal'
         );
 
         String decoded = rawResponse;
 
-        // CONTINUOS
-        if (continuosRead) {
-          try {
-            decoded =
-                decoded.replaceAll(RegExp(r'[^\d.]'), '').substring(0, 6);
-          } catch (_) {}
-        }
+        if (digitalScaleModel.toLowerCase().contains('urano')) {
+          int idxN0 = decoded.indexOf('N0');
+          int idxKg = decoded.indexOf('kg');
 
-        // URANO / TOLEDO / OTHERS
-        else {
-          if (digitalScaleModel.toLowerCase().contains('urano')) {
-            int idxN0 = decoded.indexOf('N0');
-            int idxKg = decoded.indexOf('kg');
+          if (idxN0 > -1 && idxKg > -1) {
+            decoded = decoded
+                .substring(idxN0 + 2, idxKg)
+                .replaceAll(',', '.')
+                .trim();
+          }
+        } else {
+          decoded = decoded.replaceAll(RegExp(r'[^\x02\x03\x20-\x7E]'), '');
 
-            if (idxN0 > -1 && idxKg > -1) {
-              decoded = decoded
-                  .substring(idxN0 + 2, idxKg)
-                  .replaceAll(',', '.')
-                  .trim();
+          final stx = decoded.indexOf('\x02');
+          final etx = decoded.indexOf('\x03');
+
+          String frame;
+
+          if (stx >= 0 && etx > stx) {
+            frame = decoded.substring(stx + 1, etx).trim();
+          } else {
+            frame = decoded.trim();
+          }
+
+          if (digitalScaleModel.toLowerCase().contains('upx 20')) {
+            final match = RegExp(r'\d+').firstMatch(frame);
+            if (match != null) {
+              decoded = match.group(0) ?? '';
             }
           } else {
-            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '');
+            decoded = decoded.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
           }
         }
 

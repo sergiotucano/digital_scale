@@ -82,7 +82,7 @@ void main() {
        - Protocol USE-P2
        - recommended timeout 3000 ms
 
- - ### UPX EA-23 / EA-32
+ - ### UPX EA-20 / EA-32
    - #### Configuration
        - tIPo Prot 3
        - Cont 0 (continuos) or 1 (ENQ)
