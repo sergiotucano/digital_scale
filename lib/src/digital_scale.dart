@@ -83,9 +83,17 @@ class DigitalScale implements DigitalScaleImplementation {
         parity = 0;
         break;
 
-      case 'upx':
+      case 'upx32':
         initString = String.fromCharCode(5);
         factor = 1;
+        stopBits = 1;
+        bits = 8;
+        parity = 0;
+        break;
+
+      case 'upx20':
+        initString = String.fromCharCode(5);
+        factor = 1000;
         stopBits = 1;
         bits = 8;
         parity = 0;
