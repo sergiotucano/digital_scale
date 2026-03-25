@@ -147,19 +147,18 @@ class DigitalScale implements DigitalScaleImplementation {
     }
   }
 
-  /// DIRECT READ — NO STREAM — POLLING
   Future<String> _readDirectSerial() async {
     final StringBuffer buffer = StringBuffer();
+    String lastFrame = '';
 
-    const int inactivityTimeoutMs = 300;
-    const int pollIntervalMs = 10;
+    const int inactivityTimeoutMs = 500;
+    const int pollIntervalMs = 20;
     const int maxBytes = 4096;
 
     final int startTotal = DateTime.now().millisecondsSinceEpoch;
     int lastActivity = startTotal;
 
     while (true) {
-
       final now = DateTime.now().millisecondsSinceEpoch;
       if (now - startTotal > digitalScaleTimeout) {
         break;
@@ -168,10 +167,16 @@ class DigitalScale implements DigitalScaleImplementation {
       final bytes = serialPort.read(512);
 
       if (bytes.isNotEmpty) {
-        buffer.write(utf8.decode(bytes, allowMalformed: true));
+        final chunk = utf8.decode(bytes, allowMalformed: false);
+        buffer.write(chunk);
         lastActivity = now;
 
-        if (buffer.length > maxBytes){
+        if (chunk.contains('\n') || chunk.contains('\r')) {
+          lastFrame = buffer.toString();
+          buffer.clear();
+        }
+
+        if (buffer.length > maxBytes) {
           break;
         }
       } else {
@@ -181,20 +186,21 @@ class DigitalScale implements DigitalScaleImplementation {
         await Future.delayed(const Duration(milliseconds: pollIntervalMs));
       }
 
-      final text = buffer.toString();
-      if (text.contains('\n') || text.contains('\r')){
-        break;
-      }
-
-      if (continuosRead){
+      if (continuosRead) {
         if (now - startTotal > inactivityTimeoutMs) {
           break;
         }
       }
-
     }
 
-    return buffer.toString();
+    return continuosRead ? lastFrame : buffer.toString();
+  }
+
+  @override
+  closeSerialPort() {
+    try {
+      serialPort.close();
+    } catch (_) {}
   }
 
   /// create the reader and return the weight
@@ -253,15 +259,15 @@ class DigitalScale implements DigitalScaleImplementation {
       //-----------------------------
       // SERIAL — DIRECT READ
       //-----------------------------
-
-      saveLogToFile('0 - inicio leitura direta ${DateTime.now()}', 'normal');
+      saveLogToFile('-------------', 'normal');
+      saveLogToFile('0 - inicio ${DateTime.now()}\n', 'normal');
       while (DateTime.now().isBefore(deadline)) {
         await writeInPort(initString);
 
         final rawResponse = await _readDirectSerial();
 
         saveLogToFile(
-            '1 - resposta lida  ${DateTime.now()} → $rawResponse', 'normal'
+            '1 - resposta ${DateTime.now()} → $rawResponse', 'normal'
         );
 
         String decoded = rawResponse;
@@ -277,39 +283,81 @@ class DigitalScale implements DigitalScaleImplementation {
                 .trim();
           }
         } else {
+
           decoded = decoded.replaceAll(RegExp(r'[^\x02\x03\x20-\x7E]'), '');
 
           final stx = decoded.indexOf('\x02');
+          if (stx >= 0) {
+            decoded = decoded.substring(stx + 1);
+          }
+
           final etx = decoded.indexOf('\x03');
+          if (etx >= 0) {
+            decoded = decoded.substring(0, etx);
+          }
 
-          String frame;
+          decoded = decoded.trim();
 
-          if (stx >= 0 && etx > stx) {
-            frame = decoded.substring(stx + 1, etx).trim();
-          } else {
-            frame = decoded.trim();
+          if (digitalScaleModel.toLowerCase().contains('toledo')) {
+            if (continuosRead) {
+              decoded = _normalizeToledoWeight(decoded);
+            }
+
+            if (decoded.isEmpty) {
+              await Future.delayed(const Duration(milliseconds: 20));
+              continue;
+            }
+
+            weight = double.parse(decoded) / factor;
           }
 
           if (digitalScaleModel.toLowerCase().contains('upx 20')) {
+            String frame;
+
+            if (stx >= 0 && etx > stx) {
+              frame = decoded.substring(stx + 1, etx).trim();
+            } else {
+              frame = decoded.trim();
+            }
+
             final match = RegExp(r'\d+').firstMatch(frame);
             if (match != null) {
               decoded = match.group(0) ?? '';
             }
-          } else {
-            decoded = decoded.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
           }
+
+          if (digitalScaleModel.toLowerCase().contains('upx 32')) {
+            decoded = decoded.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+          } else {
+            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '');
+          }
+
+        }
+
+        try {
+          if (digitalScaleModel.toLowerCase().contains('toledo')) {
+            if (continuosRead) {
+              decoded = _normalizeToledoWeight(decoded);
+            }
+
+            if (decoded.isEmpty) {
+              await Future.delayed(const Duration(milliseconds: 20));
+              continue;
+            }
+
+            weight = double.parse(decoded) / factor;
+          } else {
+            weight = double.parse(decoded) / factor;
+          }
+
+          weight = roundAbnt.roundAbnt(weight, 3);
+        } catch (_) {
+          weight = 0.0;
         }
 
         if (decoded.isEmpty) {
           await Future.delayed(const Duration(milliseconds: 20));
           continue;
-        }
-
-        try {
-          weight = double.parse(decoded) / factor;
-          weight = roundAbnt.roundAbnt(weight, 3);
-        } catch (_) {
-          weight = 0.0;
         }
 
         if (weight == 0.0) {
@@ -322,6 +370,7 @@ class DigitalScale implements DigitalScaleImplementation {
       closeSerialPort();
 
       saveLogToFile('2 - weight → $weight', 'normal');
+      saveLogToFile('-------------\n\n', 'normal');
 
       return weight;
     } catch (e) {
@@ -336,11 +385,14 @@ class DigitalScale implements DigitalScaleImplementation {
     }
   }
 
-  @override
-  closeSerialPort() {
-    try {
-      serialPort.close();
-    } catch (_) {}
+  String _normalizeToledoWeight(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^\d.]'), '');
+
+    if (!cleaned.contains('.')) {
+      return '';
+    }
+
+    return cleaned;
   }
 
   @override
