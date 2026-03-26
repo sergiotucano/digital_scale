@@ -21,6 +21,11 @@ class DigitalScale implements DigitalScaleImplementation {
   static late BluetoothConnection connectionBt;
   final bool saveLogFile;
 
+  final StreamController<double> _controller = StreamController.broadcast();
+  Stream<double> get weightStream => _controller.stream;
+
+  Timer? _timer;
+
   /// initialize the serial port and call methods
   DigitalScale({
     required this.digitalScalePort,
@@ -147,7 +152,9 @@ class DigitalScale implements DigitalScaleImplementation {
     }
   }
 
-  Future<String> _readDirectSerial() async {
+  ///read byte data
+  @override
+  Future<String> readDirectSerial() async {
     final StringBuffer buffer = StringBuffer();
     String lastFrame = '';
 
@@ -196,11 +203,62 @@ class DigitalScale implements DigitalScaleImplementation {
     return continuosRead ? lastFrame : buffer.toString();
   }
 
+  /// close serial port
   @override
   closeSerialPort() {
     try {
       serialPort.close();
     } catch (_) {}
+  }
+
+  /// start continuous mode
+  @override
+  void startContinuousRead() {
+    if (!digitalScaleBt) {
+      if (!serialPort.isOpen) {
+        open();
+      }
+    }
+
+    _timer?.cancel();
+
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      try {
+        final bytes = serialPort.read(512);
+
+        if (bytes.isNotEmpty) {
+          final raw = utf8.decode(bytes, allowMalformed: true);
+
+          final weight = parseWeight(raw);
+
+          if (weight != null) {
+            _controller.add(weight);
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  ///stop continuous mode
+  @override
+  void stopContinuousRead() {
+    _timer?.cancel();
+    _timer = null;
+    closeSerialPort();
+  }
+
+  /// parse for continuous mode
+  @override
+  double? parseWeight(String raw) {
+    try {
+      String cleaned = raw.replaceAll(RegExp(r'[^\d.]'), '');
+
+      if (cleaned.isEmpty) return null;
+
+      return double.parse(cleaned) / factor;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// create the reader and return the weight
@@ -264,7 +322,7 @@ class DigitalScale implements DigitalScaleImplementation {
       while (DateTime.now().isBefore(deadline)) {
         await writeInPort(initString);
 
-        final rawResponse = await _readDirectSerial();
+        final rawResponse = await readDirectSerial();
 
         saveLogToFile(
             '1 - resposta ${DateTime.now()} → $rawResponse', 'normal'
@@ -385,6 +443,7 @@ class DigitalScale implements DigitalScaleImplementation {
     }
   }
 
+  /// format weight for return
   String _normalizeToledoWeight(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^\d.]'), '');
 
@@ -395,6 +454,7 @@ class DigitalScale implements DigitalScaleImplementation {
     return cleaned;
   }
 
+  /// save log in disk
   @override
   saveLogToFile(String log, String mode) {
     bool canSavelog = true;

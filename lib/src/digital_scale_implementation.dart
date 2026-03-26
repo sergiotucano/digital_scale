@@ -20,4 +20,17 @@ abstract class DigitalScaleImplementation {
 
   /// close serial port
   closeSerialPort();
+
+  ///read byte data
+  Future<String> readDirectSerial();
+
+  /// start continuous mode
+  void startContinuousRead();
+
+  ///stop continuous mode
+  void stopContinuousRead();
+
+  /// parse for continuous mode
+  double? parseWeight(String raw);
+
 }

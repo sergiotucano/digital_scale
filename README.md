@@ -42,6 +42,57 @@ void main() {
 
   /// async return of weight
   digitalScale.getWeight().then((resp) => print('weight $resp'));
+  
+  /// continuous mode
+  
+  ///Now You can read the weight in continuos mode with a listner
+  ///on intState
+  @override
+  void initState() {
+    super.initState();
+    ScaleUtils.startContinuousRead(
+      onWeight: (wd) async {
+        print('weight $wd');
+      }
+    );
+  }
+
+  /// and dispose
+  @override
+  void dispose() {
+    ScaleUtils.stopContinuousRead();
+    super.dispose();
+  }
+  
+  ///call listner 
+  static void startContinuousRead({
+    required Function(double weight) onWeight,
+  }) async {
+    
+    _digitalScale = DigitalScale(
+        digitalScalePort: 'COM1',
+        digitalScaleModel: 'toledo prix 3',
+        digitalScaleRate: 9600,
+        digitalScaleTimeout: 3000,
+        digitalScaleBt: false,
+        continuosRead: true,
+        saveLogFile: true
+    );
+
+    _digitalScale!.startContinuousRead();
+
+    _subscription?.cancel();
+
+    _subscription = _digitalScale!.weightStream.listen((weight) {
+      onWeight(weight);
+    });
+  }
+
+  static void stopContinuousRead() {
+    _subscription?.cancel();
+    _digitalScale?.stopContinuousRead();
+  }
+
 }
 ```
 

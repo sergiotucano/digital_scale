@@ -1,4 +1,7 @@
-## 1.2.0+2
+## 1.2.1+3
+* improve code for continuous reading
+
+## 1.2.1+2
 * improve code for continuous reading and fix toledo code.
 
 ## 1.2.0+1
