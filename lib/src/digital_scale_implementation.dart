@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// This method read from digital Scale a weight
-@immutable
+//@immutable
 abstract class DigitalScaleImplementation {
   /// open Serial Port
   bool open();
