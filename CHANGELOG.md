@@ -1,3 +1,6 @@
+## 1.2.3+0
+* fix upx 20 and upx 32 reading
+
 ## 1.2.2+3
 * improve code for continuous reading
 

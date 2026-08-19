@@ -174,11 +174,14 @@ class DigitalScale implements DigitalScaleImplementation {
       final bytes = serialPort.read(512);
 
       if (bytes.isNotEmpty) {
-        final chunk = utf8.decode(bytes, allowMalformed: false);
+        final chunk = utf8.decode(bytes, allowMalformed: true);
         buffer.write(chunk);
         lastActivity = now;
 
         if (chunk.contains('\n') || chunk.contains('\r')) {
+          if (digitalScaleModel.toLowerCase().contains('upx')) {
+            break;
+          }
           lastFrame = buffer.toString();
           buffer.clear();
         }
@@ -200,7 +203,9 @@ class DigitalScale implements DigitalScaleImplementation {
       }
     }
 
-    return continuosRead ? lastFrame : buffer.toString();
+    return (continuosRead && !digitalScaleModel.toLowerCase().contains('upx'))
+        ? lastFrame
+        : buffer.toString();
   }
 
   /// close serial port
@@ -341,73 +346,44 @@ class DigitalScale implements DigitalScaleImplementation {
                 .trim();
           }
         } else {
-
           decoded = decoded.replaceAll(RegExp(r'[^\x02\x03\x20-\x7E]'), '');
 
           final stx = decoded.indexOf('\x02');
-          if (stx >= 0) {
-            decoded = decoded.substring(stx + 1);
-          }
-
           final etx = decoded.indexOf('\x03');
-          if (etx >= 0) {
-            decoded = decoded.substring(0, etx);
-          }
 
-          decoded = decoded.trim();
-
-          if (digitalScaleModel.toLowerCase().contains('toledo')) {
-            if (continuosRead) {
-              decoded = _normalizeToledoWeight(decoded);
-            }
-
-            if (decoded.isEmpty) {
-              await Future.delayed(const Duration(milliseconds: 20));
-              continue;
-            }
-
-            weight = double.parse(decoded) / factor;
+          String frame;
+          if (stx >= 0 && etx > stx) {
+            frame = decoded.substring(stx + 1, etx).trim();
+          } else {
+            frame = decoded.trim();
           }
 
           if (digitalScaleModel.toLowerCase().contains('upx 20')) {
-            String frame;
-
-            if (stx >= 0 && etx > stx) {
-              frame = decoded.substring(stx + 1, etx).trim();
-            } else {
-              frame = decoded.trim();
-            }
-
             final match = RegExp(r'\d+').firstMatch(frame);
             if (match != null) {
               decoded = match.group(0) ?? '';
+            } else {
+              decoded = frame;
             }
-          }
-
-          if (digitalScaleModel.toLowerCase().contains('upx 32')) {
-            decoded = decoded.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
-          } else {
-            decoded = decoded.replaceAll(RegExp(r'[^\d.]'), '');
-          }
-
-        }
-
-        try {
-          if (digitalScaleModel.toLowerCase().contains('toledo')) {
+          } else if (digitalScaleModel.toLowerCase().contains('upx 32')) {
+            decoded = frame.replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '');
+          } else if (digitalScaleModel.toLowerCase().contains('toledo')) {
+            decoded = frame;
             if (continuosRead) {
               decoded = _normalizeToledoWeight(decoded);
             }
-
-            if (decoded.isEmpty) {
-              await Future.delayed(const Duration(milliseconds: 20));
-              continue;
-            }
-
-            weight = double.parse(decoded) / factor;
           } else {
-            weight = double.parse(decoded) / factor;
+            decoded = frame.replaceAll(RegExp(r'[^\d.]'), '');
+          }
+        }
+
+        try {
+          if (decoded.isEmpty) {
+            await Future.delayed(const Duration(milliseconds: 20));
+            continue;
           }
 
+          weight = double.parse(decoded) / factor;
           weight = roundAbnt.roundAbnt(weight, 3);
         } catch (_) {
           weight = 0.0;
